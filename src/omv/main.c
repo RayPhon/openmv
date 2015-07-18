@@ -199,6 +199,119 @@ static void make_flash_fs()
 
     led_state(LED_RED, 0);
 }
+#include "driver/include/m2m_wifi.h"
+#include "driver/include/nmasic.h"
+
+#define MAIN_WLAN_SSID        ""
+#define MAIN_WLAN_AUTH        M2M_WIFI_SEC_WPA_PSK
+#define MAIN_WLAN_PSK         ""
+
+/** Mac address information. */
+static uint8_t mac_addr[M2M_MAC_ADDRES_LEN];
+
+/** User define MAC Address. */
+const char main_user_define_mac_address[] = {0xf8, 0xf0, 0x05, 0x20, 0x0b, 0x09};
+
+/**
+ * \brief Callback to get the Wi-Fi status update.
+ *
+ * \param[in] u8MsgType type of Wi-Fi notification. Possible types are:
+ *  - [M2M_WIFI_RESP_CON_STATE_CHANGED](@ref M2M_WIFI_RESP_CON_STATE_CHANGED)
+ *  - [M2M_WIFI_REQ_DHCP_CONF](@ref M2M_WIFI_REQ_DHCP_CONF)
+ * \param[in] pvMsg A pointer to a buffer containing the notification parameters
+ * (if any). It should be casted to the correct data type corresponding to the
+ * notification type.
+ */
+static void wifi_cb(uint8_t u8MsgType, void *pvMsg)
+{
+	switch (u8MsgType) {
+	case M2M_WIFI_RESP_CON_STATE_CHANGED:
+	{
+		tstrM2mWifiStateChanged *pstrWifiState = (tstrM2mWifiStateChanged *)pvMsg;
+		if (pstrWifiState->u8CurrState == M2M_WIFI_CONNECTED) {
+			m2m_wifi_request_dhcp_client();
+		} else if (pstrWifiState->u8CurrState == M2M_WIFI_DISCONNECTED) {
+			printf("Wi-Fi disconnected\r\n");
+
+			/* Connect to defined AP. */
+			m2m_wifi_connect((char *)MAIN_WLAN_SSID, sizeof(MAIN_WLAN_SSID), MAIN_WLAN_AUTH, (void *)MAIN_WLAN_PSK, M2M_WIFI_CH_ALL);
+		}
+
+		break;
+	}
+
+	case M2M_WIFI_REQ_DHCP_CONF:
+	{
+		uint8_t *pu8IPAddress = (uint8_t *)pvMsg;
+		printf("Wi-Fi connected\r\n");
+		printf("Wi-Fi IP is %u.%u.%u.%u\r\n",
+				pu8IPAddress[0], pu8IPAddress[1], pu8IPAddress[2], pu8IPAddress[3]);
+		break;
+	}
+
+	default:
+	{
+		break;
+	}
+	}
+}
+
+static void wifi_init(void ) {
+	int8_t ret;
+	tstrWifiInitParam param;
+    uint8_t u8IsMacAddrValid;
+
+	/* Initialize the BSP. */
+	nm_bsp_init();
+
+	/* Initialize Wi-Fi parameters structure. */
+	memset((uint8_t *)&param, 0, sizeof(tstrWifiInitParam));
+
+	/* Initialize Wi-Fi driver with data and status callbacks. */
+	param.pfAppWifiCb = wifi_cb;
+	ret = m2m_wifi_init(&param);
+	if (M2M_SUCCESS != ret) {
+		printf("main: m2m_wifi_init call error!(%d)\r\n", ret);
+		while (1) {
+		}
+	}
+
+	/* Get MAC Address from OTP. */
+	m2m_wifi_get_otp_mac_address(mac_addr, &u8IsMacAddrValid);
+	if (!u8IsMacAddrValid) {
+		printf("USER MAC Address : ");
+
+		/* Cannot found MAC Address from OTP. Set user define MAC address. */
+		m2m_wifi_set_mac_address((uint8_t *)main_user_define_mac_address);
+	} else {
+		printf("OTP MAC Address : ");
+	}
+
+	/* Get MAC Address. */
+	m2m_wifi_get_mac_address(mac_addr);
+
+	printf("%02X:%02X:%02X:%02X:%02X:%02X\r\n",
+			mac_addr[0], mac_addr[1], mac_addr[2],
+			mac_addr[3], mac_addr[4], mac_addr[5]);
+}
+
+STATIC mp_obj_t py_test_wifi(void ) {
+
+    wifi_init();
+
+    printf("Connecting to %s.\r\n", (char *)MAIN_WLAN_SSID);
+	/* Connect to defined AP. */
+	m2m_wifi_connect((char *)MAIN_WLAN_SSID, sizeof(MAIN_WLAN_SSID), MAIN_WLAN_AUTH, (void *)MAIN_WLAN_PSK, M2M_WIFI_CH_ALL);
+
+	while (1) {
+		/* Handle pending events from network controller. */
+		while (m2m_wifi_handle_events(NULL) != M2M_SUCCESS) {
+		}
+	}
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_test_wifi_obj, py_test_wifi);
 
 int main(void)
 {
@@ -263,6 +376,7 @@ soft_reset:
     mp_store_global(qstr_from_str("FreakDescSave"),     (mp_obj_t)&py_image_save_descriptor_obj);
     mp_store_global(qstr_from_str("LBPDesc"),           (mp_obj_t)&py_image_load_lbp_obj);
     mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
+    mp_store_global(qstr_from_str("test_wifi"),         (mp_obj_t)&py_test_wifi_obj);
 
     if (sdcard_is_present()) {
         sdcard_init();
