@@ -46,7 +46,7 @@ endif
 # Compiler Flags
 CFLAGS += -std=gnu99 -Wall -Werror -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET)
+CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=24000000 -D$(TARGET)
 ifeq ($(TARGET), OPENMV1)
     CFLAGS += -DSTM32F407xx
 else
