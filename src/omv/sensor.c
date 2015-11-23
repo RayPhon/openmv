@@ -11,6 +11,11 @@
 #include <stm32f4xx_hal.h>
 #include <stm32f4xx_hal_msp.h>
 
+#include "obj.h"
+#include "objmodule.h"
+#include "objstr.h"
+#include "led.h"
+
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
@@ -40,15 +45,15 @@ DCMI_HandleTypeDef DCMIHandle;
 
 const int res_width[] = {
     88,     /* QQCIF */
-    160,    /* QQVGA */
-    128,    /* QQVGA2*/
     #ifdef OPENMV2
     192,    /* QCIF  */
     #else
     176,    /* QCIF  */
     #endif
+    320,    /* CIF */
+    160,    /* QQVGA */
+    128,    /* QQVGA2*/
     320,    /* QVGA  */
-    352,    /* CIF   */
     640,    /* VGA   */
     800,    /* SVGA  */
     1280,   /* SXGA  */
@@ -57,11 +62,11 @@ const int res_width[] = {
 
 const int res_height[]= {
     72,     /* QQCIF */
+    144,    /* QCIF  */
+    280,    /* CIF   */
     120,    /* QQVGA */
     160,    /* QQVGA2*/
-    144,    /* QCIF  */
     240,    /* QVGA  */
-    288,    /* CIF   */
     480,    /* VGA   */
     600,    /* SVGA   */
     1024,   /* SXGA  */
@@ -302,9 +307,10 @@ int sensor_snapshot(struct image *image)
         length =(fb->w * fb->h * 2)/4;
     }
 
-    /* Lock framebuffer mutex */
+    /* framebuffer mutex */
     mutex_lock(&fb->lock);
 
+    led_state(LED_BLUE,1);
     // Snapshot start tick
     snapshot_start = HAL_GetTick();
 
@@ -322,6 +328,7 @@ int sensor_snapshot(struct image *image)
             return -1;
         }
     }
+    led_state(LED_BLUE,0);
 
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
         /* If GRAYSCALE extract Y channel from YUYV */
@@ -348,11 +355,13 @@ int sensor_snapshot(struct image *image)
     fb->ready = 1;
 
     /* unlock framebuffer mutex */
+
     mutex_unlock(&fb->lock);
 
     while (fb->lock_tried) {
         systick_sleep(2);
     }
+
     return 0;
 }
 
@@ -490,7 +499,18 @@ int sensor_set_saturation(int level)
 
 int sensor_set_exposure(int exposure)
 {
-    return 0;
+    if (sensor.set_exposure != NULL) {
+        return sensor.set_exposure(exposure);
+    }
+    return -1;
+}
+
+int sensor_set_gain(int gain)
+{
+     if (sensor.set_gain != NULL) {
+        return sensor.set_gain(gain);
+    }
+    return -1;
 }
 
 int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)

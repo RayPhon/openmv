@@ -1,0 +1,73 @@
+micropython/stmhal/lexerfatfs.c:40:    if (fb->pos >= fb->len) {
+micropython/stmhal/lexerfatfs.c:41:        if (fb->len < sizeof(fb->buf)) {
+micropython/stmhal/lexerfatfs.c:45:            f_read(&fb->fp, fb->buf, sizeof(fb->buf), &n);
+micropython/stmhal/lexerfatfs.c:49:            fb->len = n;
+micropython/stmhal/lexerfatfs.c:50:            fb->pos = 0;
+micropython/stmhal/lexerfatfs.c:53:    return fb->buf[fb->pos++];
+micropython/stmhal/lexerfatfs.c:57:    f_close(&fb->fp);
+micropython/stmhal/lexerfatfs.c:66:    FRESULT res = f_open(&fb->fp, filename, FA_READ);
+micropython/stmhal/lexerfatfs.c:72:    f_read(&fb->fp, fb->buf, sizeof(fb->buf), &n);
+micropython/stmhal/lexerfatfs.c:73:    fb->len = n;
+micropython/stmhal/lexerfatfs.c:74:    fb->pos = 0;
+micropython/py/lexerunix.c:49:    if (fb->pos >= fb->len) {
+micropython/py/lexerunix.c:50:        if (fb->len == 0) {
+micropython/py/lexerunix.c:53:            int n = read(fb->fd, fb->buf, sizeof(fb->buf));
+micropython/py/lexerunix.c:55:                fb->len = 0;
+micropython/py/lexerunix.c:58:            fb->len = n;
+micropython/py/lexerunix.c:59:            fb->pos = 0;
+micropython/py/lexerunix.c:62:    return fb->buf[fb->pos++];
+micropython/py/lexerunix.c:66:    if (fb->close_fd) {
+micropython/py/lexerunix.c:67:        close(fb->fd);
+micropython/py/lexerunix.c:80:    fb->fd = fd;
+micropython/py/lexerunix.c:81:    fb->close_fd = close_fd;
+micropython/py/lexerunix.c:82:    int n = read(fb->fd, fb->buf, sizeof(fb->buf));
+micropython/py/lexerunix.c:83:    fb->len = n;
+micropython/py/lexerunix.c:84:    fb->pos = 0;
+omv/usbdbg.c:57:    fb->ready=0;
+omv/usbdbg.c:58:    fb->lock_tried=0;
+omv/usbdbg.c:59:    mutex_unlock(&fb->lock);
+omv/usbdbg.c:107:            if (fb->ready && mutex_try_lock(&fb->lock)) {
+omv/usbdbg.c:108:                fb->lock_tried = 0;
+omv/usbdbg.c:112:                fb->lock_tried = 1;
+omv/usbdbg.c:120:                memcpy(buffer, fb->pixels+xfer_bytes, length);
+omv/usbdbg.c:123:                    mutex_unlock(&fb->lock);
+omv/usbdbg.c:160:                .w = fb->w,
+omv/usbdbg.c:161:                .h = fb->h,
+omv/usbdbg.c:162:                .bpp = fb->bpp,
+omv/usbdbg.c:163:                .pixels = fb->pixels
+omv/usbdbg.c:184:                .w = fb->w,
+omv/usbdbg.c:185:                .h = fb->h,
+omv/usbdbg.c:186:                .bpp = fb->bpp,
+omv/usbdbg.c:187:                .pixels = fb->pixels
+omv/sensor.c:257:    mutex_init(&fb->lock);
+omv/sensor.c:260:    fb->ready=0;
+omv/sensor.c:272:    mutex_lock(&fb->lock);
+omv/sensor.c:273:    fb->ready=0;
+omv/sensor.c:274:    mutex_unlock(&fb->lock);
+omv/sensor.c:302:    addr = (uint32_t) fb->pixels;
+omv/sensor.c:307:        length =(fb->w * fb->h * 2)/4;
+omv/sensor.c:311:    mutex_lock(&fb->lock);
+omv/sensor.c:326:            mutex_unlock(&fb->lock);
+omv/sensor.c:335:        for (int i=0; i<(fb->w * fb->h); i++) {
+omv/sensor.c:336:            fb->pixels[i] = fb->pixels[i*2];
+omv/sensor.c:345:        fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
+omv/sensor.c:349:        image->w = fb->w;
+omv/sensor.c:350:        image->h = fb->h;
+omv/sensor.c:351:        image->bpp = fb->bpp;
+omv/sensor.c:352:        image->pixels = fb->pixels;
+omv/sensor.c:355:    fb->ready = 1;
+omv/sensor.c:359:    mutex_unlock(&fb->lock);
+omv/sensor.c:361:    while (fb->lock_tried) {
+omv/sensor.c:377:    mutex_lock(&fb->lock);
+omv/sensor.c:378:    fb->ready = 0;
+omv/sensor.c:379:    mutex_unlock(&fb->lock);
+omv/sensor.c:393:            fb->bpp    = 1;
+omv/sensor.c:397:            fb->bpp    = 2;
+omv/sensor.c:400:            fb->bpp    = 0;
+omv/sensor.c:420:    mutex_lock(&fb->lock);
+omv/sensor.c:421:    fb->ready = 0;
+omv/sensor.c:422:    mutex_unlock(&fb->lock);
+omv/sensor.c:446:            fb->w =res_width[framesize];
+omv/sensor.c:447:            fb->h =res_height[framesize];
+Binary file omv/.sensor.c.swo matches
+omv/img/integral.c:20:    i_img->data = (uint32_t*) (fb->pixels+(fb->w * fb->h));

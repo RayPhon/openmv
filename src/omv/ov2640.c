@@ -15,6 +15,9 @@
 #include "systick.h"
 #include "ov2640_regs.h"
 
+#define CIF_HSIZE      (320)
+#define CIF_VSIZE      (280)
+
 #define SVGA_HSIZE     (800)
 #define SVGA_VSIZE     (600)
 
@@ -57,8 +60,8 @@ static const uint8_t default_regs[][2] = {
     { 0x4c,     0x00 },
     { 0x4a,     0x81 },
     { 0x21,     0x99 },
-    { AEW,      0x40 },
-    { AEB,      0x38 },
+    { AEW,      0x78 },
+    { AEB,      0x35 },
     /* AGC/AEC fast mode operating region */
     { VV,       VV_AGC_TH_SET(0x08, 0x02) },
     { COM19,    0x00 }, /* Zoom control 2 MSBs */
@@ -207,6 +210,60 @@ static const uint8_t default_regs[][2] = {
 };
 
 static const uint8_t cif_regs[][2] = {
+        { BANK_SEL, BANK_SEL_SENSOR },
+        /* DSP input image resoultion and window size control */
+        { COM7,    COM7_RES_CIF},
+        { COM1,    0x06 }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
+        { REG32,   0x09 }, /* UXGA=0x36, SVGA/CIF=0x09 */
+
+        { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIF=0x11 */
+        { HSTOP,   0x43 }, /* UXGA=0x75, SVGA/CIF=0x43 */
+
+        { VSTART,  0x00 }, /* UXGA=0x01, SVGA/CIF=0x00 */
+        { VSTOP,   0x4b }, /* UXGA=0x97, SVGA/CIF=0x4b */
+        { 0x3d,    0x38 }, /* UXGA=0x34, SVGA/CIF=0x38 */
+
+        { 0x35,    0xda },
+        { 0x22,    0x1a },
+        { 0x37,    0xc3 },
+        { 0x34,    0xc0 },
+        { 0x06,    0x88 },
+        { 0x0d,    0x87 },
+        { 0x0e,    0x41 },
+        { 0x42,    0x03 },
+
+        /* Set DSP input image size and offset.
+           The sensor output image can be scaled with OUTW/OUTH */
+        { BANK_SEL, BANK_SEL_DSP },
+        { R_BYPASS, R_BYPASS_DSP_BYPAS },
+
+        { RESET,   RESET_DVP },
+        { HSIZE8,  (CIF_HSIZE>>3)}, /* Image Horizontal Size HSIZE[10:3] */
+        { VSIZE8,  (CIF_VSIZE>>3)}, /* Image Vertiacl Size VSIZE[10:3] */
+
+        /* {HSIZE[11], HSIZE[2:0], VSIZE[2:0]} */
+        { SIZEL,   ((CIF_HSIZE>>6)&0x40) | ((CIF_HSIZE&0x7)<<3) | (CIF_VSIZE&0x7)},
+
+        { XOFFL,   0x00 }, /* OFFSET_X[7:0] */
+        { YOFFL,   0x00 }, /* OFFSET_Y[7:0] */
+        { HSIZE,   ((CIF_HSIZE>>2)&0xFF) }, /* H_SIZE[7:0]= HSIZE/4 */
+        { VSIZE,   ((CIF_VSIZE>>2)&0xFF) }, /* V_SIZE[7:0]= VSIZE/4 */
+
+        /* V_SIZE[8]/OFFSET_Y[10:8]/H_SIZE[8]/OFFSET_X[10:8] */
+        { VHYX,    ((CIF_VSIZE>>3)&0x80) | ((CIF_HSIZE>>7)&0x08) },
+        { TEST,    (CIF_HSIZE>>4)&0x80}, /* H_SIZE[9] */
+
+        { CTRL2,   CTRL2_DCW_EN | CTRL2_SDE_EN |
+          CTRL2_UV_AVG_EN | CTRL2_CMX_EN | CTRL2_UV_ADJ_EN },
+
+        /* H_DIVIDER/V_DIVIDER */
+        { CTRLI,   CTRLI_LP_DP | 0x00},
+        /* DVP prescalar */
+        { R_DVP_SP, R_DVP_SP_AUTO_MODE | 0x02},
+
+        { R_BYPASS, R_BYPASS_DSP_EN },
+        { RESET,    0x00 },
+        {0, 0},
 };
 
 static const uint8_t svga_regs[][2] = {
@@ -454,7 +511,11 @@ static int set_framesize(enum sensor_framesize framesize)
     int i=0;
     const uint8_t (*regs)[2];
 
-    if (framesize <= FRAMESIZE_SVGA) {
+    if (framesize <= FRAMESIZE_CIF) {
+        clkrc = 0x80;
+        regs = cif_regs;
+    }
+    else if (framesize <= FRAMESIZE_SVGA) {
         clkrc =0x80;
         regs = svga_regs;
     } else {
@@ -517,15 +578,16 @@ static int set_brightness(int level)
 {
     int ret=0;
 
+    
     level += (NUM_BRIGHTNESS_LEVELS / 2 + 1);
     if (level < 0 || level > NUM_BRIGHTNESS_LEVELS) {
         return -1;
     }
 
-    /* Switch to DSP register bank */
+    // Switch to DSP register bank 
     ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
 
-    /* Write brightness registers */
+    // Write brightness registers 
     for (int i=0; i<sizeof(brightness_regs[0])/sizeof(brightness_regs[0][0]); i++) {
         ret |= SCCB_Write(brightness_regs[0][i], brightness_regs[level][i]);
     }
@@ -555,7 +617,25 @@ static int set_saturation(int level)
 
 static int set_exposure(int exposure)
 {
-   return 0;
+    int ret = 0;
+    int reg = 0;
+    
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+    reg = SCCB_Read(COM8);
+    ret |= SCCB_Write(COM8, (reg & (~COM8_AEC_EN)));
+    ret |= SCCB_Write(0x71,0x96);
+    ret |= SCCB_Write(BANK_SEL,BANK_SEL_DSP);
+    reg = SCCB_Read(0xc3);
+    ret |= SCCB_Write(0xc3, reg & 0xf7);
+    
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+    reg = SCCB_Read(REG04);
+    ret |= SCCB_Write(REG04, (reg & 0xFC) | (exposure % 4));
+    ret |= SCCB_Write(AEC, ((exposure % 1024)>>2));
+    reg = SCCB_Read(REG45);
+    ret |= SCCB_Write(REG45, (reg | ((exposure % 65536)>>10)));
+
+   return ret;
 }
 
 static int set_gainceiling(enum sensor_gainceiling gainceiling)
@@ -605,6 +685,45 @@ static int set_colorbar(int enable)
     return ret;
 }
 
+static int set_gain(int gain)
+{
+
+    int ret=0;
+
+    int reg=0;
+    int gainf=1;
+
+    if(gain > 127){
+        return -1;
+    }
+    if(gain > 64){
+        gainf = 0x3f0 + ((gain >> 2)-16);
+    }
+    else if(gain > 32){
+        gainf = 0x1f0 + ((gain >> 1)-16);
+    }
+    else if(gain > 16){
+        gainf = 0xf0 + (gain-16);
+    }
+    else if(gain > 8){
+        gainf = 0x70 + (gain-8)*2;
+    }
+    else if(gain > 4){
+        gainf = 0x30 + (gain-4)*4;
+    }
+    else if(gain > 2){
+        gainf = 0x10 + (gain-2)*8;
+    }
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+    reg = SCCB_Read(COM8);
+    ret |= SCCB_Write(COM8, (reg & (~COM8_AGC_EN)));
+    ret |= SCCB_Write(GAIN, (gainf % 256));
+    ret |= SCCB_Write(REG45, ((gainf / 256)%4));
+
+   return ret;
+  
+}
+
 int ov2640_init(struct sensor_dev *sensor)
 {
     /* set HSYNC/VSYNC/PCLK polarity */
@@ -623,6 +742,7 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_quality = set_quality;
+    sensor->set_gain = set_gain;
     sensor->set_colorbar = set_colorbar;
     return 0;
 }

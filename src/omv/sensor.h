@@ -26,11 +26,11 @@ enum sensor_pixformat {
 
 enum sensor_framesize {
     FRAMESIZE_QQCIF,    /* 88x72     */
+    FRAMESIZE_QCIF,     /* 176x144   */
+    FRAMESIZE_CIF,      /* 352x288   */
     FRAMESIZE_QQVGA,    /* 160x120   */
     FRAMESIZE_QQVGA2,   /* 128x160   */
-    FRAMESIZE_QCIF,     /* 176x144   */
     FRAMESIZE_QVGA,     /* 320x240   */
-    FRAMESIZE_CIF,      /* 352x288   */
     FRAMESIZE_VGA,      /* 640x480   */
     FRAMESIZE_SVGA,     /* 800x600   */
     FRAMESIZE_SXGA,     /* 1280x1024 */
@@ -89,6 +89,7 @@ struct sensor_dev {
     int  (*set_brightness)  (int level);
     int  (*set_saturation)  (int level);
     int  (*set_exposure)    (int exposure);
+    int  (*set_gain)        (int gain);
     int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
     int  (*set_quality)     (int quality);
     int  (*set_colorbar)    (int enable);
@@ -218,4 +219,6 @@ int sensor_set_quality(int qs);
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
 int sensor_set_colorbar(int enable);
+
+int sensor_set_gain(int gain);
 #endif /* __SENSOR_H__ */

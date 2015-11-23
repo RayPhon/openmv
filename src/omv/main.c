@@ -126,6 +126,8 @@ static const char fresh_selftest_py[] =
 "    sensor.set_saturation(0)\n"
 "    sensor.set_gainceiling(8)\n"
 "    sensor.set_contrast(2)\n"
+"    sensor.set_exposure(1000)\n"
+"    sensor.set_gain(4)\n"
 "\n"
 "    # Set sensor pixel format\n"
 "    sensor.set_framesize(sensor.QVGA)\n"
@@ -269,6 +271,8 @@ int main(void)
 {
     FRESULT f_res;
     int sensor_init_ret;
+    int gain = 8;
+    int exposure = 1000;
 
     // Stack limit should be less than real stack size, so we
     // had chance to recover from limit hit.
@@ -399,7 +403,14 @@ soft_reset:
 
     // Enter REPL
     nlr_buf_t nlr;
+    int gain_ret=0;
     for (;;) {
+        //exposure = exposure*2;
+        //if(exposure > 15000) exposure = 1000;
+        sensor_reset();
+        gain_ret = sensor_set_gain(gain);
+        gain_ret |= sensor_set_exposure(exposure);
+        
         if (nlr_push(&nlr) == 0) {
             while (usbdbg_script_ready()) {
                 nlr_buf_t nlr;

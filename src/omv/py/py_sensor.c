@@ -112,6 +112,19 @@ static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
     return mp_const_true;
 }
 
+static mp_obj_t py_sensor_set_gain(mp_obj_t gain) {
+    if ( sensor_set_gain(mp_obj_get_int(gain)) != 0) {
+        return mp_const_false;
+    }
+    return mp_const_false;
+}
+
+static mp_obj_t py_sensor_set_exposure(mp_obj_t exposure) {
+    if (sensor_set_exposure(mp_obj_get_int(exposure)) != 0) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
 static mp_obj_t py_sensor_set_brightness(mp_obj_t brightness) {
     if (sensor_set_brightness(mp_obj_get_int(brightness)) != 0) {
         return mp_const_false;
@@ -179,6 +192,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj,     py_sensor_set_qu
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj,    py_sensor_set_colorbar);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,       py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,        py_sensor_read_reg);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gain_obj,        py_sensor_set_gain);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_exposure_obj,        py_sensor_set_exposure);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -213,6 +228,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_colorbar),    (mp_obj_t)&py_sensor_set_colorbar_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),     (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),      (mp_obj_t)&py_sensor_read_reg_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_gain),        (mp_obj_t)&py_sensor_set_gain_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_exposure),        (mp_obj_t)&py_sensor_set_exposure_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
